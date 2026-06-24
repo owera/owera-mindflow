@@ -97,3 +97,6 @@ add_executable(mindflow_uxrepro
   resources/resources.qrc
 )
 target_link_libraries(mindflow_uxrepro PRIVATE mindflow_core Qt6::Test)
+
+add_executable(mindflow_gifframes tools/gifframes.cpp)
+target_link_libraries(mindflow_gifframes PRIVATE mindflow_core)

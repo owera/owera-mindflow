@@ -8,28 +8,40 @@
 
 #include <QApplication>
 #include <QFileInfo>
+#include <QFrame>
 #include <QPixmap>
 #include <QTextStream>
 
 using namespace mindflow;
+
+// Hide scrollbars for clean screenshots (the huge scene rect would otherwise show
+// them at the viewport edges).
+static void clean(MindMapView& v) {
+    v.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    v.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    v.setFrameShape(QFrame::NoFrame);
+}
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
 
     Document doc;
     Node* root = doc.root();
-    doc.setNodeText(root, QStringLiteral("MindFlow"));
+    doc.setNodeText(root, QStringLiteral("Weekend in Lisbon"));
     // Optional 2nd arg sets the root layout direction: organic|right|left|down|up|compact
     if (argc > 2)
         root->layoutDirection = layoutDirectionFromString(QString::fromLocal8Bit(argv[2]));
-    Node* a = doc.addChild(root, QStringLiteral("Canvas"));
-    doc.addChild(a, QStringLiteral("Pan / Zoom"));
-    doc.addChild(a, QStringLiteral("Inline editing"));
-    Node* b = doc.addChild(root, QStringLiteral("Model"));
-    doc.addChild(b, QStringLiteral("Undo / Redo"));
-    doc.addChild(b, QStringLiteral("Save / Load"));
-    Node* c = doc.addChild(root, QStringLiteral("Layout"));
-    doc.addChild(c, QStringLiteral("Organic"));
+    Node* a = doc.addChild(root, QStringLiteral("Stay"));
+    doc.addChild(a, QStringLiteral("Alfama flat"));
+    doc.addChild(a, QStringLiteral("Check-in 3pm"));
+    Node* b = doc.addChild(root, QStringLiteral("Food"));
+    doc.addChild(b, QStringLiteral("Time Out Market"));
+    doc.addChild(b, QStringLiteral("Pastéis de Belém"));
+    Node* c = doc.addChild(root, QStringLiteral("Sights"));
+    doc.addChild(c, QStringLiteral("Belém Tower"));
+    doc.addChild(c, QStringLiteral("Tram 28"));
+    Node* d = doc.addChild(root, QStringLiteral("Getting around"));
+    doc.addChild(d, QStringLiteral("Metro day pass"));
 
     const QString mode = argc > 3 ? QString::fromLocal8Bit(argv[3]) : QString();
 
@@ -37,6 +49,7 @@ int main(int argc, char** argv) {
     if (mode == QLatin1String("export")) {
         MindMapView v;
         v.setDocument(&doc);
+        clean(v);
         v.resize(900, 560);
         v.show();
         app.processEvents();
@@ -59,16 +72,16 @@ int main(int argc, char** argv) {
     // M6 exercise: the synced Outline view with a task and a sticker.
     if (mode == QLatin1String("outline")) {
         {
-            NodeContent ca = a->content(); // Canvas
-            ca.sticker = QStringLiteral("🎨");
+            NodeContent ca = a->content(); // Stay
+            ca.sticker = QStringLiteral("🏠");
             doc.setNodeContent(a, ca);
         }
         {
-            Node* panZoom = a->children().front().get();
-            NodeContent c = panZoom->content();
+            Node* flat = a->children().front().get(); // Alfama flat
+            NodeContent c = flat->content();
             c.isTask = true;
             c.taskDone = true;
-            doc.setNodeContent(panZoom, c);
+            doc.setNodeContent(flat, c);
         }
         OutlineView ov;
         ov.setDocument(&doc);
@@ -100,6 +113,7 @@ int main(int argc, char** argv) {
         }
         MindMapView gv;
         gv.setDocument(&gal);
+        clean(gv);
         gv.resize(1000, 320);
         gv.show();
         app.processEvents();
@@ -148,6 +162,7 @@ int main(int argc, char** argv) {
         }
         MindMapView v;
         v.setDocument(&d);
+        clean(v);
         v.setBackgroundBrush(d.theme().canvas);
         v.resize(900, 480);
         v.show();
@@ -163,14 +178,15 @@ int main(int argc, char** argv) {
 
     // M5 exercises: a labelled, curved cross-connection between two branches.
     if (mode == QLatin1String("connect")) {
-        Node* panZoom = a->children().front().get();   // under Canvas
-        Node* undoRedo = b->children().front().get();  // under Model
-        doc.addConnection(panZoom, undoRedo);
+        Node* belem = c->children().front().get();     // Belém Tower (Sights, right)
+        Node* metro = d->children().front().get();      // Metro day pass (left)
+        doc.addConnection(belem, metro);
         const int cid = doc.connections().front().id;
-        doc.setConnectionLabel(cid, QStringLiteral("depends on"));
-        doc.setConnectionWaypoint(cid, QPointF(0, -70));
+        doc.setConnectionLabel(cid, QStringLiteral("take the metro"));
+        doc.setConnectionWaypoint(cid, QPointF(0, 150)); // bow the curve down so it reads
         MindMapView v;
         v.setDocument(&doc);
+        clean(v);
         v.setBackgroundBrush(doc.theme().canvas);
         v.resize(900, 560);
         v.show();
@@ -193,12 +209,13 @@ int main(int argc, char** argv) {
 
     MindMapView view;
     view.setDocument(&doc);
+    clean(view);
     view.setBackgroundBrush(doc.theme().canvas);
     view.resize(900, 600);
     view.show();
     app.processEvents();
     if (mode == QLatin1String("focus")) {
-        view.searchAndSelect(QStringLiteral("Canvas")); // select the Canvas branch
+        view.searchAndSelect(QStringLiteral("Sights")); // select the Sights branch
         view.toggleFocusOnSelection();
     }
     view.zoomToFit();

@@ -1,0 +1,9 @@
+/build/
+*.user
+*.o
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+.cache/
+compile_commands.json

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="26" fill="#f5f6f8"/>
+  <!-- branches -->
+  <g fill="none" stroke-width="5" stroke-linecap="round">
+    <path d="M58 64 C40 64 36 40 24 38" stroke="#e06c2b"/>
+    <path d="M58 70 C42 78 38 96 26 98" stroke="#2fa84f"/>
+    <path d="M76 60 C94 56 98 36 108 34" stroke="#2d6cdf"/>
+    <path d="M78 70 C96 76 100 92 110 96" stroke="#c03a6b"/>
+  </g>
+  <!-- leaf nodes -->
+  <g>
+    <circle cx="22" cy="38" r="9" fill="#e06c2b"/>
+    <circle cx="24" cy="98" r="9" fill="#2fa84f"/>
+    <circle cx="110" cy="34" r="9" fill="#2d6cdf"/>
+    <circle cx="112" cy="96" r="9" fill="#c03a6b"/>
+  </g>
+  <!-- central node -->
+  <rect x="50" y="50" width="34" height="28" rx="9" fill="#333a46"/>
+  <circle cx="67" cy="64" r="4.5" fill="#ffffff"/>
+</svg>

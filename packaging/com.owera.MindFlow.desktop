@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Owera MindFlow
+GenericName=Mind Map Editor
+Comment=A MindNode-inspired open source mind map app for Linux
+Exec=mindflow %f
+Icon=com.owera.MindFlow
+Terminal=false
+Categories=Office;ProjectManagement;
+MimeType=application/x-mindflow;
+Keywords=mindmap;brainstorm;outline;ideas;diagram;
+StartupNotify=true

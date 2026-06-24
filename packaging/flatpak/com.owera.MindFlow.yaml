@@ -1,0 +1,25 @@
+# Flatpak manifest for Owera MindFlow.
+# Build:  flatpak-builder --user --install --force-clean build-flatpak \
+#           packaging/flatpak/com.owera.MindFlow.yaml
+# Run:    flatpak run com.owera.MindFlow
+app-id: com.owera.MindFlow
+runtime: org.kde.Platform
+runtime-version: '6.7'
+sdk: org.kde.Sdk
+command: mindflow
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+modules:
+  - name: mindflow
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      # Build from the repository root. For a release, switch to a `git`/`archive`
+      # source pinned to a tag.
+      - type: dir
+        path: ../..

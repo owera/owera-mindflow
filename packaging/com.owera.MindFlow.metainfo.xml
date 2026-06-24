@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.owera.MindFlow</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Owera MindFlow</name>
+  <summary>A MindNode-inspired open source mind map app for Linux</summary>
+  <developer id="com.owera">
+    <name>Owera</name>
+  </developer>
+  <url type="homepage">https://example.org/owera-mindflow</url>
+  <description>
+    <p>
+      Owera MindFlow is a MindNode-inspired, open source mind mapping application for
+      Linux. Branch ideas freely on an infinite canvas with organic, vertical,
+      horizontal and compact layouts, style nodes with shapes, colors and themes,
+      attach notes, images, tags, stickers and tasks, draw cross-connections between
+      ideas, focus on a single branch, and work in an always-synced outline view.
+    </p>
+    <p>Import and export OPML, Markdown, FreeMind, CSV, plain text, PNG, SVG and PDF.</p>
+  </description>
+  <launchable type="desktop-id">com.owera.MindFlow.desktop</launchable>
+  <categories>
+    <category>Office</category>
+    <category>Graphics</category>
+  </categories>
+  <provides>
+    <binary>mindflow</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-06-19">
+      <description><p>First milestone: core mapping, layouts, themes, rich content,
+        cross-connections, outline view and import/export.</p></description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

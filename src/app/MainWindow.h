@@ -39,7 +39,8 @@ private:
     void writeSettings();
     void showShortcuts();
 
-    void selectInBoth(Node* node); // sync selection across views (guarded)
+    void syncFromView(Node* node);    // map selection -> inspector + outline
+    void syncFromOutline(Node* node); // outline selection -> inspector + map
 
     Document* m_doc = nullptr;
     MindMapView* m_view = nullptr;

@@ -57,8 +57,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     connect(m_doc, &Document::modified, this, &MainWindow::updateTitle);
     connect(m_doc, &Document::themeChanged, this, &MainWindow::applyThemeToView);
     // Both views drive the inspector and keep each other's selection in sync.
-    connect(m_view, &MindMapView::selectionChanged, this, &MainWindow::selectInBoth);
-    connect(m_outline, &OutlineView::selectionChanged, this, &MainWindow::selectInBoth);
+    connect(m_view, &MindMapView::selectionChanged, this, &MainWindow::syncFromView);
+    connect(m_outline, &OutlineView::selectionChanged, this, &MainWindow::syncFromOutline);
 
     // Accessibility: name the major regions for screen readers.
     m_view->setAccessibleName(tr("Mind map canvas"));
@@ -130,13 +130,25 @@ MainWindow::~MainWindow() {
         m_doc->disconnect(this);
 }
 
-void MainWindow::selectInBoth(Node* node) {
+// Selection sync: each view's change updates the inspector and mirrors to the OTHER
+// view only — never back to the originating view. Re-syncing the map to itself would
+// collapse a multi-node selection down to one, which would make "connect the two
+// selected nodes" (Ctrl+L) impossible.
+void MainWindow::syncFromView(Node* node) {
+    m_inspector->setSelectedNode(node);
+    if (m_syncingSelection)
+        return;
+    m_syncingSelection = true;
+    m_outline->selectNode(node);
+    m_syncingSelection = false;
+}
+
+void MainWindow::syncFromOutline(Node* node) {
     m_inspector->setSelectedNode(node);
     if (m_syncingSelection)
         return;
     m_syncingSelection = true;
     m_view->selectNode(node);
-    m_outline->selectNode(node);
     m_syncingSelection = false;
 }
 

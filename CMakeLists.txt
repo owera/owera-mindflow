@@ -100,3 +100,11 @@ target_link_libraries(mindflow_uxrepro PRIVATE mindflow_core Qt6::Test)
 
 add_executable(mindflow_gifframes tools/gifframes.cpp)
 target_link_libraries(mindflow_gifframes PRIVATE mindflow_core)
+
+add_executable(mindflow_uxshortcuts
+  tools/uxshortcuts.cpp
+  src/app/MainWindow.cpp
+  src/app/Inspector.cpp
+  resources/resources.qrc
+)
+target_link_libraries(mindflow_uxshortcuts PRIVATE mindflow_core Qt6::Test)

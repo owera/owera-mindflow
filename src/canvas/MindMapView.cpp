@@ -14,6 +14,7 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QScrollBar>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVariantAnimation>
 #include <QWheelEvent>
@@ -83,11 +84,13 @@ void MindMapView::rebuild() {
     m_anim->stop();
     QHash<int, QPointF> oldPos;
     for (auto it = m_nodeItems.constBegin(); it != m_nodeItems.constEnd(); ++it)
-        oldPos.insert(it.key()->id(), it.value()->pos());
+        oldPos.insert(it.value()->nodeId(), it.value()->pos()); // cached id: key Node* may be freed
     // Preserve the current selection across the rebuild so the inspector keeps
-    // tracking the same node (e.g. after a theme recolor or content edit).
-    Node* selected = selectedNode();
-    const int selectedId = selected ? selected->id() : -1;
+    // tracking the same node (e.g. after a theme recolor or content edit). Read the
+    // id from the item's cache, NOT node()->id(): on reset/open/import the old Nodes
+    // may already be freed while their items still linger here (use-after-free).
+    NodeItem* selItem = selectedItem();
+    const int selectedId = selItem ? selItem->nodeId() : -1;
 
     m_nodeItems.clear();
     m_branches.clear();
@@ -102,15 +105,22 @@ void MindMapView::rebuild() {
     // item is finally deleted, its destructor would clear the focus we are about to
     // give the new node's inline editor.
     m_scene->setFocusItem(nullptr);
-    const auto oldItems = m_scene->items();
-    for (QGraphicsItem* gi : oldItems) {
-        if (gi->parentItem())
-            continue; // child items (e.g. the inline editor) go with their parent
-        m_scene->removeItem(gi);
-        if (auto* obj = dynamic_cast<QObject*>(gi))
-            obj->deleteLater();
-        else
-            delete gi;
+    // Block selection signals while removing items: on reset/open/import the model
+    // Nodes are already gone, and a selectionChanged emission here would push a
+    // freed Node into the inspector/outline (use-after-free). Scoped to the teardown
+    // only; the valid post-rebuild selection is re-applied (and notified) below.
+    {
+        QSignalBlocker selectionGuard(m_scene);
+        const auto oldItems = m_scene->items();
+        for (QGraphicsItem* gi : oldItems) {
+            if (gi->parentItem())
+                continue; // child items (e.g. the inline editor) go with their parent
+            m_scene->removeItem(gi);
+            if (auto* obj = dynamic_cast<QObject*>(gi))
+                obj->deleteLater();
+            else
+                delete gi;
+        }
     }
     if (!m_doc || !m_doc->root())
         return;
@@ -576,6 +586,17 @@ bool MindMapView::handleCommandKey(QKeyEvent* event) {
     // the "Enter adds a child instead of a sibling" bug: while typing a new node's
     // name the command must act on THAT node, not on whatever the selection state
     // happens to be (which can lag during rapid entry / differ by input route).
+    // Escape is context-sensitive and handled before the selection guard: cancel an
+    // in-progress edit if one is open, otherwise exit focus mode.
+    if (event->key() == Qt::Key_Escape) {
+        if (NodeItem* ed = editingItem()) {
+            ed->cancelEditing();
+            return true;
+        }
+        clearFocus();
+        return true;
+    }
+
     NodeItem* item = editingItem();
     if (!item)
         item = selectedItem();

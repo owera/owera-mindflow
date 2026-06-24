@@ -10,9 +10,12 @@
 #include <QApplication>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
+#include <QGraphicsTextItem>
 #include <QStackedWidget>
 #include <QTimer>
 #include <QtTest/QtTest>
+
+#include <algorithm>
 
 using namespace mindflow;
 static QTextStream out(stdout);
@@ -172,6 +175,195 @@ int main(int argc, char** argv) {
         check("Ctrl+F has shortcut wired", find && find->shortcut() == QKeySequence(QKeySequence::Find));
         check("Ctrl+F triggers Find", fired);
     }
+
+    // ===================== Asymmetric / edge cases =====================
+    auto cx = [&](Node* n) { return itemFor(n) ? itemFor(n)->sceneCenter().x() : 0.0; };
+    auto cy = [&](Node* n) { return itemFor(n) ? itemFor(n)->sceneCenter().y() : 0.0; };
+    auto commit = [&] { view->scene()->setFocusItem(nullptr); settle(); };
+    auto editorCount = [&] {
+        int c = 0;
+        for (auto* it : view->scene()->items())
+            if (it->type() == QGraphicsTextItem::Type) ++c;
+        return c;
+    };
+
+    // Enter on the root degenerates to add-child (a root has no sibling).
+    doc->reset(QStringLiteral("Root")); settle();
+    select(doc->root());
+    vkey(Qt::Key_Return);
+    check("Enter on root adds a child (no sibling possible)",
+          doc->root()->children().size() == 1);
+    commit();
+
+    // Not-editing entry path: select a node (no F2), press Tab -> adds a child.
+    Node* child = doc->root()->children().front().get();
+    select(child);
+    vkey(Qt::Key_Tab);
+    check("Tab on a selected (not editing) node adds a child",
+          child->children().size() == 1);
+    commit();
+
+    // F2 while already editing is a no-op (no second editor).
+    select(child);
+    vkey(Qt::Key_F2);
+    const int e1 = editorCount();
+    vkey(Qt::Key_F2);
+    check("F2 while editing opens no second editor", editorCount() == e1 && e1 == 1);
+    vkey(Qt::Key_Escape); settle();
+
+    // Esc cancels an in-progress edit (text reverts; editing stops).
+    select(child);
+    const QString orig = child->text();
+    vkey(Qt::Key_F2);
+    vtype(QStringLiteral("ZZZ"));
+    vkey(Qt::Key_Escape);
+    check("Esc cancels an in-progress edit (text reverts)",
+          child->text() == orig && !(itemFor(child) && itemFor(child)->isEditing()));
+
+    // Delete a branch with children, then Ctrl+Z restores the whole subtree.
+    doc->reset(QStringLiteral("Root")); settle();
+    {
+        Node* a = doc->addChild(doc->root(), QStringLiteral("A"));
+        doc->addChild(a, QStringLiteral("a1"));
+        doc->addChild(a, QStringLiteral("a2"));
+        settle();
+        select(a);
+        vkey(Qt::Key_Delete);
+        check("Delete removes a branch with children", doc->root()->children().empty());
+        QTest::keyClick(vp, Qt::Key_Z, Qt::ControlModifier); settle();
+        check("Ctrl+Z restores the whole subtree",
+              doc->root()->children().size() == 1 &&
+              doc->root()->children().front()->children().size() == 2);
+    }
+
+    // Arrow navigation: mirroring across sides + boundaries.
+    doc->reset(QStringLiteral("Center")); settle();
+    {
+        Node* r = doc->root();
+        for (const char* t : {"A", "B", "C", "D"})
+            doc->addChild(r, QString::fromLatin1(t));
+        settle();
+        const double rootX = cx(r);
+
+        select(r); vkey(Qt::Key_Right);
+        Node* onRight = selNode();
+        check("Right from root selects a right-side node", onRight && cx(onRight) > rootX);
+        if (onRight) {
+            const double x0 = cx(onRight);
+            vkey(Qt::Key_Left);
+            check("Left from a right-side node moves toward root",
+                  selNode() && cx(selNode()) < x0);
+        }
+
+        select(r); vkey(Qt::Key_Left);
+        Node* onLeft = selNode();
+        check("Left from root selects a left-side node", onLeft && cx(onLeft) < rootX);
+        if (onLeft) {
+            const double x0 = cx(onLeft);
+            vkey(Qt::Key_Right);
+            check("Right from a left-side node moves toward root (mirrored)",
+                  selNode() && cx(selNode()) > x0);
+        }
+
+        // Up/Down between two stacked siblings on the same (right) side.
+        QList<Node*> rightNodes;
+        for (const auto& ch : r->children())
+            if (cx(ch.get()) > rootX) rightNodes << ch.get();
+        std::sort(rightNodes.begin(), rightNodes.end(),
+                  [&](Node* p, Node* q) { return cy(p) < cy(q); });
+        if (rightNodes.size() >= 2) {
+            select(rightNodes.front());
+            vkey(Qt::Key_Down);
+            check("Down moves to the lower sibling", selNode() == rightNodes[1]);
+            vkey(Qt::Key_Up);
+            check("Up moves to the upper sibling", selNode() == rightNodes.front());
+        }
+
+        // Boundary: Right from the rightmost node is a no-op.
+        Node* rightmost = nullptr;
+        double maxx = -1e18;
+        for (const auto& ch : r->children())
+            if (cx(ch.get()) > maxx) { maxx = cx(ch.get()); rightmost = ch.get(); }
+        select(rightmost);
+        vkey(Qt::Key_Right);
+        check("Right from the rightmost node is a no-op", selNode() == rightmost);
+
+        // Arrow with nothing selected: safe no-op.
+        view->scene()->clearSelection(); settle();
+        vkey(Qt::Key_Right);
+        check("Arrow with no selection is a safe no-op",
+              view->scene()->selectedItems().isEmpty());
+    }
+
+    // Ctrl+L guard: needs exactly two; pressing twice dedupes.
+    doc->reset(QStringLiteral("Root")); settle();
+    {
+        Node* r = doc->root();
+        Node* x = doc->addChild(r, QStringLiteral("X"));
+        Node* y = doc->addChild(r, QStringLiteral("Y"));
+        Node* z = doc->addChild(r, QStringLiteral("Z"));
+        settle();
+        auto setSel = [&](std::initializer_list<Node*> ns) {
+            view->scene()->clearSelection();
+            for (Node* n : ns) if (auto* i = itemFor(n)) i->setSelected(true);
+            settle();
+        };
+
+        setSel({x}); // one selected
+        QTest::keyClick(vp, Qt::Key_L, Qt::ControlModifier); settle();
+        check("Ctrl+L with one node selected does nothing", doc->connections().empty());
+
+        view->scene()->clearSelection(); settle(); // zero selected
+        QTest::keyClick(vp, Qt::Key_L, Qt::ControlModifier); settle();
+        check("Ctrl+L with nothing selected does nothing", doc->connections().empty());
+
+        setSel({x, y, z}); // three selected
+        QTest::keyClick(vp, Qt::Key_L, Qt::ControlModifier); settle();
+        check("Ctrl+L with three selected does nothing", doc->connections().empty());
+
+        setSel({x, y}); // exactly two
+        QTest::keyClick(vp, Qt::Key_L, Qt::ControlModifier); settle();
+        check("Ctrl+L with two selected connects them", doc->connections().size() == 1);
+
+        setSel({x, y}); // same pair again -> deduped
+        QTest::keyClick(vp, Qt::Key_L, Qt::ControlModifier); settle();
+        check("Ctrl+L on the same pair again is deduped", doc->connections().size() == 1);
+    }
+
+    // Redo asymmetry: Ctrl+Shift+Z redoes an add and a connection (not just delete).
+    doc->reset(QStringLiteral("Root")); settle();
+    {
+        Node* r = doc->root();
+        select(r);
+        // Add an *empty* child (committing empty text creates no extra undo step, so
+        // the add is a single undoable command).
+        vkey(Qt::Key_Tab); commit();
+        check("setup: child added", r->children().size() == 1);
+        QTest::keyClick(vp, Qt::Key_Z, Qt::ControlModifier); settle();
+        check("Ctrl+Z undoes the add", r->children().empty());
+        QTest::keyClick(vp, Qt::Key_Z, Qt::ControlModifier | Qt::ShiftModifier); settle();
+        check("Ctrl+Shift+Z redoes the add", r->children().size() == 1);
+
+        // connection redo
+        Node* c2 = doc->addChild(r, QStringLiteral("M"));
+        settle();
+        view->scene()->clearSelection();
+        if (auto* i = itemFor(r->children().front().get())) i->setSelected(true);
+        if (auto* i = itemFor(c2)) i->setSelected(true);
+        settle();
+        QTest::keyClick(vp, Qt::Key_L, Qt::ControlModifier); settle();
+        check("setup: connection added", doc->connections().size() == 1);
+        QTest::keyClick(vp, Qt::Key_Z, Qt::ControlModifier); settle();
+        check("Ctrl+Z undoes the connection", doc->connections().empty());
+        QTest::keyClick(vp, Qt::Key_Z, Qt::ControlModifier | Qt::ShiftModifier); settle();
+        check("Ctrl+Shift+Z redoes the connection", doc->connections().size() == 1);
+    }
+
+    // Delete on the sole root is a no-op (the doc always keeps a root).
+    doc->reset(QStringLiteral("Solo")); settle();
+    select(doc->root());
+    vkey(Qt::Key_Delete);
+    check("Delete on the sole root is a no-op", doc->root() != nullptr);
 
     out << (g_fail == 0 ? "\nALL README SHORTCUTS: PASS\n"
                         : QStringLiteral("\n%1 SHORTCUT FAILURE(S)\n").arg(g_fail));

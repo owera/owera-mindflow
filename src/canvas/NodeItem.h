@@ -21,6 +21,9 @@ public:
     int type() const override { return Type; }
 
     Node* node() const { return m_node; }
+    // Stable node id cached at construction. Safe to read even if the underlying
+    // Node was freed (e.g. during reset/open) before the scene is rebuilt.
+    int nodeId() const { return m_id; }
 
     QRectF boundingRect() const override;
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -44,6 +47,7 @@ public:
     void beginEditing();
     bool isEditing() const;
     void commitEditing(); // commit the current inline edit without grabbing focus
+    void cancelEditing(); // discard the current inline edit, restoring the old text
 
 signals:
     void textCommitted(mindflow::Node* node, const QString& text);
@@ -70,6 +74,7 @@ private:
     void relayoutContent();      // recompute internal element rects + m_size
 
     Node* m_node;
+    int m_id; // cached node id (see nodeId())
     QSizeF m_size;
     class QGraphicsTextItem* m_editor = nullptr;
     bool m_suppressMoveCommit = false;

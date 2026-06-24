@@ -46,7 +46,7 @@ protected:
 } // namespace
 
 NodeItem::NodeItem(Node* node, QGraphicsItem* parent)
-    : QGraphicsObject(parent), m_node(node) {
+    : QGraphicsObject(parent), m_node(node), m_id(node->id()) {
     setFlags(ItemIsSelectable | ItemIsMovable | ItemIsFocusable |
              ItemSendsGeometryChanges);
     setCacheMode(DeviceCoordinateCache);
@@ -401,6 +401,8 @@ void NodeItem::beginEditing() {
 bool NodeItem::isEditing() const { return m_editor != nullptr; }
 
 void NodeItem::commitEditing() { finishEditing(/*commit=*/true, /*refocus=*/false); }
+
+void NodeItem::cancelEditing() { finishEditing(/*commit=*/false, /*refocus=*/true); }
 
 void NodeItem::finishEditing(bool commit, bool refocus) {
     if (!m_editor)

@@ -381,8 +381,9 @@ void MainWindow::buildActions() {
     viewMenu->addAction(tr("&Focus on Selection"),
                         QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F), m_view,
                         &MindMapView::toggleFocusOnSelection);
-    viewMenu->addAction(tr("E&xit Focus"), QKeySequence(Qt::Key_Escape), m_view,
-                        &MindMapView::clearFocus);
+    // No Esc accelerator here: the canvas owns Esc (cancel edit, else exit focus) via
+    // MindMapView::handleCommandKey, so a window shortcut must not pre-empt it.
+    viewMenu->addAction(tr("E&xit Focus (Esc)"), m_view, &MindMapView::clearFocus);
     auto* showConns = viewMenu->addAction(tr("Show &Connections"));
     showConns->setCheckable(true);
     showConns->setChecked(true);

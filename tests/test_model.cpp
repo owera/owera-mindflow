@@ -36,6 +36,8 @@ private slots:
     void allTagsAreCollected();
     void connectionAddRemoveUndo();
     void connectionRoundTrip();
+    void addSiblingOnRootFallsBackToChild();
+    void removeSoleRootIsNoOp();
     void markdownRoundTrip();
     void opmlRoundTrip();
     void markdownImportsTasksAndTags();
@@ -467,6 +469,27 @@ void TestModel::markdownImportsTasksAndTags() {
     Node* todo = dst.root()->children().at(1).get();
     QVERIFY(todo->isTask && !todo->taskDone);
     QCOMPARE(todo->children().front()->text(), QStringLiteral("Subtask"));
+}
+
+void TestModel::addSiblingOnRootFallsBackToChild() {
+    // A root has no parent, so "add sibling" degenerates to "add child".
+    Document doc;
+    Node* root = doc.root();
+    Node* added = doc.addSibling(root, QStringLiteral("X"));
+    QVERIFY(added != nullptr);
+    QCOMPARE(added->parent(), root);
+    QCOMPARE(root->children().size(), size_t(1));
+}
+
+void TestModel::removeSoleRootIsNoOp() {
+    // The document must always keep at least one root; deleting the only root is a
+    // no-op (and must not crash).
+    Document doc;
+    Node* root = doc.root();
+    doc.removeNode(root);
+    QCOMPARE(doc.roots().size(), size_t(1));
+    QCOMPARE(doc.root(), root);
+    QVERIFY(!doc.undoStack()->canUndo()); // nothing was pushed
 }
 
 QTEST_MAIN(TestModel)

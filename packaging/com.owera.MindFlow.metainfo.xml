@@ -28,9 +28,12 @@
     <binary>mindflow</binary>
   </provides>
   <releases>
-    <release version="0.1.0" date="2026-06-19">
-      <description><p>First milestone: core mapping, layouts, themes, rich content,
-        cross-connections, outline view and import/export.</p></description>
+    <release version="0.1.0" date="2026-06-24">
+      <description><p>First release: infinite canvas with keyboard-first editing,
+        organic/vertical/horizontal/compact layouts, light/dark themes and 8 node
+        shapes, rich content (tasks, tags, stickers, notes, images), cross-connections,
+        focus mode, a synced outline view, and import/export across OPML, Markdown,
+        FreeMind, CSV, text, PNG, SVG and PDF.</p></description>
     </release>
   </releases>
   <content_rating type="oars-1.1"/>

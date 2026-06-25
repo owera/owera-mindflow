@@ -108,3 +108,11 @@ add_executable(mindflow_uxshortcuts
   resources/resources.qrc
 )
 target_link_libraries(mindflow_uxshortcuts PRIVATE mindflow_core Qt6::Test)
+
+add_executable(mindflow_uxdblclick
+  tools/uxdblclick.cpp
+  src/app/MainWindow.cpp
+  src/app/Inspector.cpp
+  resources/resources.qrc
+)
+target_link_libraries(mindflow_uxdblclick PRIVATE mindflow_core Qt6::Test)

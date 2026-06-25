@@ -75,6 +75,7 @@ private:
 
     Node* m_node;
     int m_id; // cached node id (see nodeId())
+    QPointF m_pressPos; // item pos at mouse-press, to detect real drags vs clicks
     QSizeF m_size;
     class QGraphicsTextItem* m_editor = nullptr;
     bool m_suppressMoveCommit = false;

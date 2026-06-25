@@ -1,4 +1,6 @@
-/build/
+/build*/
+/AppDir/
+*.AppImage
 *.user
 *.o
 *.moc

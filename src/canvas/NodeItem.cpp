@@ -419,6 +419,7 @@ void NodeItem::finishEditing(bool commit, bool refocus) {
 }
 
 void NodeItem::mousePressEvent(QGraphicsSceneMouseEvent* event) {
+    m_pressPos = pos(); // remember where a drag would start (see mouseReleaseEvent)
     // A click on the fold knob toggles collapse instead of selecting/dragging.
     const QRectF knob = foldKnobRect();
     if (!knob.isNull() && knob.contains(event->pos())) {
@@ -455,7 +456,11 @@ QVariant NodeItem::itemChange(GraphicsItemChange change, const QVariant& value) 
 
 void NodeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event) {
     QGraphicsObject::mouseReleaseEvent(event);
-    if (!m_suppressMoveCommit && (flags() & ItemIsMovable))
+    // Only commit a move if the node was actually dragged. Committing on every plain
+    // click would push a no-op "Move Node" command and trigger a rebuild — which, on
+    // a double-click, destroys the inline editor that just opened (and pollutes undo).
+    if (!m_suppressMoveCommit && (flags() & ItemIsMovable) &&
+        (pos() - m_pressPos).manhattanLength() > 3.0)
         emit positionChangedByUser(m_node, sceneCenter());
 }
 
